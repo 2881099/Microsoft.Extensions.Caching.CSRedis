@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>Caching.CSRedis</AssemblyName>
+    <PackageId>Caching.CSRedis</PackageId>
+    <RootNamespace>Caching.CSRedis</RootNamespace>
+    <Version>2.1.2</Version>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageProjectUrl>https://github.com/2881099/Microsoft.Extensions.Caching.CSRedis</PackageProjectUrl>
+    <Description>分布式缓存 CSRedisCore 现实 Microsoft.Extensions.Caching</Description>
+    <RepositoryUrl>https://github.com/2881099/Microsoft.Extensions.Caching.CSRedis</RepositoryUrl>
+    <PackageTags>caching csredis redis c# 分布式缓存 Microsoft.Extensions.Caching</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CSRedisCore" Version="2.1.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.Extensions.Caching.Abstractions">
+      <HintPath>..\..\..\..\..\Program Files\dotnet\sdk\NuGetFallbackFolder\microsoft.extensions.caching.abstractions\2.1.0\lib\netstandard2.0\Microsoft.Extensions.Caching.Abstractions.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>
