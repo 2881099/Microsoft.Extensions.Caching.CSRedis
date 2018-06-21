@@ -1,53 +1,275 @@
-﻿using Microsoft.Extensions.Caching.Distributed;
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Caching.Distributed;
 
-namespace Microsoft.Extensions.Caching {
+namespace Microsoft.Extensions.Caching.Redis {
 	public class CSRedisCache : IDistributedCache {
+		private CSRedis.CSRedisClient _redisClient;
+		public CSRedisCache(CSRedis.CSRedisClient redisClient) {
+			_redisClient = redisClient;
+		}
+		// KEYS[1] = = key
+		// ARGV[1] = absolute-expiration - ticks as long (-1 for none)
+		// ARGV[2] = sliding-expiration - ticks as long (-1 for none)
+		// ARGV[3] = relative-expiration (long, in seconds, -1 for none) - Min(absolute-expiration - Now, sliding-expiration)
+		// ARGV[4] = data - byte[]
+		// this order should not change LUA script depends on it
+		private const string SetScript = (@"
+                redis.call('HMSET', KEYS[1], 'absexp', ARGV[1], 'sldexp', ARGV[2], 'data', ARGV[4])
+                if ARGV[3] ~= '-1' then
+                  redis.call('EXPIRE', KEYS[1], ARGV[3])
+                end
+                return 1");
+		private const string AbsoluteExpirationKey = "absexp";
+		private const string SlidingExpirationKey = "sldexp";
+		private const string DataKey = "data";
+		private const long NotPresent = -1;
+
+		private readonly SemaphoreSlim _connectionLock = new SemaphoreSlim(initialCount: 1, maxCount: 1);
 
 		public byte[] Get(string key) {
-			return this.GetAsync(key, CancellationToken.None).Result;
-		}
-		public Task<byte[]> GetAsync(string key, CancellationToken token) {
-			if (key == null) throw new ArgumentNullException(nameof(key));
+			if (key == null) {
+				throw new ArgumentNullException(nameof(key));
+			}
 
-			var ret = CSRedis.QuickHelperBase.HashGet(key, "data");
-			return Task.FromResult<byte[]>(string.IsNullOrEmpty(ret) ? null : Convert.FromBase64String(ret));
+			return GetAndRefresh(key, getData: true);
+		}
+
+		public async Task<byte[]> GetAsync(string key, CancellationToken token = default(CancellationToken)) {
+			if (key == null) {
+				throw new ArgumentNullException(nameof(key));
+			}
+
+			token.ThrowIfCancellationRequested();
+
+			return await GetAndRefreshAsync(key, getData: true, token: token);
 		}
 
 		public void Set(string key, byte[] value, DistributedCacheEntryOptions options) {
-			this.SetAsync(key, value, options, CancellationToken.None).Wait();
-		}
-		public Task SetAsync(string key, byte[] value, DistributedCacheEntryOptions options, CancellationToken token) {
-			if (key == null) throw new ArgumentNullException(nameof(key));
-			if (value == null) throw new ArgumentNullException(nameof(value));
-			if (options == null) throw new ArgumentNullException(nameof(options));
+			if (key == null) {
+				throw new ArgumentNullException(nameof(key));
+			}
 
-			var expire = options.AbsoluteExpiration.HasValue ? options.AbsoluteExpirationRelativeToNow.Value : options.SlidingExpiration ?? TimeSpan.FromMinutes(20);
-			CSRedis.QuickHelperBase.HashSet(key, expire, "expire", expire.Ticks, "data", Convert.ToBase64String(value));
-			return Task.Run(() => { });
+			if (value == null) {
+				throw new ArgumentNullException(nameof(value));
+			}
+
+			if (options == null) {
+				throw new ArgumentNullException(nameof(options));
+			}
+
+			var creationTime = DateTimeOffset.UtcNow;
+
+			var absoluteExpiration = GetAbsoluteExpiration(creationTime, options);
+
+			var result = _redisClient.Eval(SetScript, new[] { key },
+				new[]
+				{
+						string.Concat(absoluteExpiration?.Ticks ?? NotPresent),
+						string.Concat(options.SlidingExpiration?.Ticks ?? NotPresent),
+						string.Concat(GetExpirationInSeconds(creationTime, absoluteExpiration, options) ?? NotPresent),
+						Convert.ToBase64String(value)
+				});
+		}
+
+		public async Task SetAsync(string key, byte[] value, DistributedCacheEntryOptions options, CancellationToken token = default(CancellationToken)) {
+			if (key == null) {
+				throw new ArgumentNullException(nameof(key));
+			}
+
+			if (value == null) {
+				throw new ArgumentNullException(nameof(value));
+			}
+
+			if (options == null) {
+				throw new ArgumentNullException(nameof(options));
+			}
+
+			token.ThrowIfCancellationRequested();
+
+			var creationTime = DateTimeOffset.UtcNow;
+
+			var absoluteExpiration = GetAbsoluteExpiration(creationTime, options);
+			await _redisClient.EvalAsync(SetScript, new[] { key },
+				new[]
+				{
+						string.Concat(absoluteExpiration?.Ticks ?? NotPresent),
+						string.Concat(options.SlidingExpiration?.Ticks ?? NotPresent),
+						string.Concat(GetExpirationInSeconds(creationTime, absoluteExpiration, options) ?? NotPresent),
+						Convert.ToBase64String(value)
+				});
 		}
 
 		public void Refresh(string key) {
-			this.RefreshAsync(key, CancellationToken.None).Wait();
+			if (key == null) {
+				throw new ArgumentNullException(nameof(key));
+			}
+
+			GetAndRefresh(key, getData: false);
 		}
 
-		public Task RefreshAsync(string key, CancellationToken token) {
-			if (key == null) throw new ArgumentNullException(nameof(key));
+		public async Task RefreshAsync(string key, CancellationToken token = default(CancellationToken)) {
+			if (key == null) {
+				throw new ArgumentNullException(nameof(key));
+			}
 
-			if (long.TryParse(CSRedis.QuickHelperBase.HashGet(key, "expire"), out long expire) && expire > 0) CSRedis.QuickHelperBase.Expire(key, TimeSpan.FromTicks(expire));
-			return Task.Run(() => { });
+			token.ThrowIfCancellationRequested();
+
+			await GetAndRefreshAsync(key, getData: false, token: token);
 		}
+
+		private byte[] GetAndRefresh(string key, bool getData) {
+			if (key == null) {
+				throw new ArgumentNullException(nameof(key));
+			}
+
+			// This also resets the LRU status as desired.
+			// TODO: Can this be done in one operation on the server side? Probably, the trick would just be the DateTimeOffset math.
+			string[] results;
+			if (getData) {
+				results = _redisClient.HashMGet(key, new[] { AbsoluteExpirationKey, SlidingExpirationKey, DataKey });
+			} else {
+				results = _redisClient.HashMGet(key, new[] { AbsoluteExpirationKey, SlidingExpirationKey });
+			}
+
+			// TODO: Error handling
+			if (results.Length >= 2) {
+				MapMetadata(results, out DateTimeOffset? absExpr, out TimeSpan? sldExpr);
+				Refresh(key, absExpr, sldExpr);
+			}
+
+			if (results.Length >= 3 && !string.IsNullOrEmpty(results[2])) {
+				return Convert.FromBase64String(results[2]);
+			}
+
+			return null;
+		}
+
+		private async Task<byte[]> GetAndRefreshAsync(string key, bool getData, CancellationToken token = default(CancellationToken)) {
+			if (key == null) {
+				throw new ArgumentNullException(nameof(key));
+			}
+
+			token.ThrowIfCancellationRequested();
+
+			// This also resets the LRU status as desired.
+			// TODO: Can this be done in one operation on the server side? Probably, the trick would just be the DateTimeOffset math.
+			string[] results;
+			if (getData) {
+				results = await _redisClient.HashMGetAsync(key, new[] { AbsoluteExpirationKey, SlidingExpirationKey, DataKey });
+			} else {
+				results = await _redisClient.HashMGetAsync(key, new[] { AbsoluteExpirationKey, SlidingExpirationKey });
+			}
+
+			// TODO: Error handling
+			if (results.Length >= 2) {
+				MapMetadata(results, out DateTimeOffset? absExpr, out TimeSpan? sldExpr);
+				await RefreshAsync(key, absExpr, sldExpr, token);
+			}
+
+			if (results.Length >= 3 && !string.IsNullOrEmpty(results[2])) {
+				return Convert.FromBase64String(results[2]);
+			}
+
+			return null;
+		}
+
 		public void Remove(string key) {
-			this.RemoveAsync(key, CancellationToken.None).Wait();
+			if (key == null) {
+				throw new ArgumentNullException(nameof(key));
+			}
+
+			_redisClient.Remove(key.Split('|'));
+			// TODO: Error handling
 		}
 
-		public Task RemoveAsync(string key, CancellationToken token) {
-			if (key == null) throw new ArgumentNullException(nameof(key));
+		public async Task RemoveAsync(string key, CancellationToken token = default(CancellationToken)) {
+			if (key == null) {
+				throw new ArgumentNullException(nameof(key));
+			}
 
-			CSRedis.QuickHelperBase.Remove(key);
-			return Task.Run(() => { });
+			await _redisClient.RemoveAsync(key.Split('|'));
+			// TODO: Error handling
+		}
+
+		private void MapMetadata(string[] results, out DateTimeOffset? absoluteExpiration, out TimeSpan? slidingExpiration) {
+			absoluteExpiration = null;
+			slidingExpiration = null;
+			if (long.TryParse(results[0], out var absoluteExpirationTicks) && absoluteExpirationTicks != NotPresent) {
+				absoluteExpiration = new DateTimeOffset(absoluteExpirationTicks, TimeSpan.Zero);
+			}
+			if (long.TryParse(results[1], out var slidingExpirationTicks) && slidingExpirationTicks != NotPresent) {
+				slidingExpiration = new TimeSpan(slidingExpirationTicks);
+			}
+		}
+
+		private void Refresh(string key, DateTimeOffset? absExpr, TimeSpan? sldExpr) {
+			if (key == null) {
+				throw new ArgumentNullException(nameof(key));
+			}
+
+			// Note Refresh has no effect if there is just an absolute expiration (or neither).
+			TimeSpan? expr = null;
+			if (sldExpr.HasValue) {
+				if (absExpr.HasValue) {
+					var relExpr = absExpr.Value - DateTimeOffset.Now;
+					expr = relExpr <= sldExpr.Value ? relExpr : sldExpr;
+				} else {
+					expr = sldExpr;
+				}
+				_redisClient.Expire(key, expr ?? TimeSpan.Zero);
+				// TODO: Error handling
+			}
+		}
+
+		private async Task RefreshAsync(string key, DateTimeOffset? absExpr, TimeSpan? sldExpr, CancellationToken token = default(CancellationToken)) {
+			if (key == null) {
+				throw new ArgumentNullException(nameof(key));
+			}
+
+			token.ThrowIfCancellationRequested();
+
+			// Note Refresh has no effect if there is just an absolute expiration (or neither).
+			TimeSpan? expr = null;
+			if (sldExpr.HasValue) {
+				if (absExpr.HasValue) {
+					var relExpr = absExpr.Value - DateTimeOffset.Now;
+					expr = relExpr <= sldExpr.Value ? relExpr : sldExpr;
+				} else {
+					expr = sldExpr;
+				}
+				await _redisClient.ExpireAsync(key, expr ?? TimeSpan.Zero);
+				// TODO: Error handling
+			}
+		}
+
+		private static long? GetExpirationInSeconds(DateTimeOffset creationTime, DateTimeOffset? absoluteExpiration, DistributedCacheEntryOptions options) {
+			if (absoluteExpiration.HasValue && options.SlidingExpiration.HasValue) {
+				return (long) Math.Min(
+					(absoluteExpiration.Value - creationTime).TotalSeconds,
+					options.SlidingExpiration.Value.TotalSeconds);
+			} else if (absoluteExpiration.HasValue) {
+				return (long) (absoluteExpiration.Value - creationTime).TotalSeconds;
+			} else if (options.SlidingExpiration.HasValue) {
+				return (long) options.SlidingExpiration.Value.TotalSeconds;
+			}
+			return null;
+		}
+
+		private static DateTimeOffset? GetAbsoluteExpiration(DateTimeOffset creationTime, DistributedCacheEntryOptions options) {
+			if (options.AbsoluteExpiration.HasValue && options.AbsoluteExpiration <= creationTime) {
+				throw new ArgumentOutOfRangeException(
+					nameof(DistributedCacheEntryOptions.AbsoluteExpiration),
+					options.AbsoluteExpiration.Value,
+					"The absolute expiration value must be in the future.");
+			}
+			var absoluteExpiration = options.AbsoluteExpiration;
+			if (options.AbsoluteExpirationRelativeToNow.HasValue) {
+				absoluteExpiration = creationTime + options.AbsoluteExpirationRelativeToNow;
+			}
+
+			return absoluteExpiration;
 		}
 	}
 }
