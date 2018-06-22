@@ -9,7 +9,7 @@
     <PackageProjectUrl>https://github.com/2881099/Microsoft.Extensions.Caching.CSRedis</PackageProjectUrl>
     <Description>分布式缓存 CSRedisCore 现实 Microsoft.Extensions.Caching</Description>
     <RepositoryUrl>https://github.com/2881099/Microsoft.Extensions.Caching.CSRedis</RepositoryUrl>
-    <PackageTags>caching csredis redis c# 分布式缓存 Microsoft.Extensions.Caching</PackageTags>
+    <PackageTags>caching csredis redis c# 分布式缓存 集群 负载 cluster Microsoft.Extensions.Caching</PackageTags>
     <WarningLevel>3</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

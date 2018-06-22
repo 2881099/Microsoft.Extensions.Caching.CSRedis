@@ -2,11 +2,29 @@
 
 # 使用方法
 
-> Install-Package Caching.CSRedis -Version 2.3.0
+> Install-Package Caching.CSRedis -Version 2.3.1
+
+## 普通模式
 
 ```csharp
-public void ConfigureServices(IServiceCollection services) {
-	var csredis = new azb.BLL.CSRedisClient(ip: "127.0.0.1", port: 6379,  pass: "", poolsize: 50, database: 13, name: "prefix前辍");
-	services.AddSingleton<IDistributedCache>(new Microsoft.Extensions.Caching.Redis.CSRedisCache(csredis));
-}
+var csredis = new CSRedis.CSRedisClient("127.0.0.1:6379,pass=123,defaultDatabase=13,poolsize=50,prefix=key前辍");
+services.AddSingleton<IDistributedCache>(new Microsoft.Extensions.Caching.Redis.CSRedisCache(csredis));
+```
+
+# 集群模式
+
+```csharp
+var csredis = new CSRedis.CSRedisClient(null,
+  "127.0.0.1:6371,pass=123,defaultDatabase=11,poolsize=10,prefix=key前辍", 
+  "127.0.0.1:6372,pass=123,defaultDatabase=12,poolsize=11,prefix=key前辍",
+  "127.0.0.1:6373,pass=123,defaultDatabase=13,poolsize=12,prefix=key前辍",
+  "127.0.0.1:6374,pass=123,defaultDatabase=14,poolsize=13,prefix=key前辍");
+services.AddSingleton<IDistributedCache>(new Microsoft.Extensions.Caching.Redis.CSRedisCache(csredis));
+```
+
+# 批量删除
+
+```csharp
+IDistributedCache cache = xxxx;
+cache.Remove("key1|key2");
 ```
