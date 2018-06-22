@@ -63,7 +63,7 @@ namespace Microsoft.Extensions.Caching.Redis {
 
 			var absoluteExpiration = GetAbsoluteExpiration(creationTime, options);
 
-			var result = _redisClient.Eval(SetScript, new[] { key },
+			var result = _redisClient.Eval(SetScript, key,
 				new[]
 				{
 						string.Concat(absoluteExpiration?.Ticks ?? NotPresent),
@@ -91,7 +91,7 @@ namespace Microsoft.Extensions.Caching.Redis {
 			var creationTime = DateTimeOffset.UtcNow;
 
 			var absoluteExpiration = GetAbsoluteExpiration(creationTime, options);
-			await _redisClient.EvalAsync(SetScript, new[] { key },
+			await _redisClient.EvalAsync(SetScript, key,
 				new[]
 				{
 						string.Concat(absoluteExpiration?.Ticks ?? NotPresent),
