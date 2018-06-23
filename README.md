@@ -2,12 +2,12 @@
 
 # 使用方法
 
-> Install-Package Caching.CSRedis -Version 2.3.3
+> Install-Package Caching.CSRedis -Version 2.3.4
 
 ## 普通模式
 
 ```csharp
-var csredis = new CSRedis.CSRedisClient("127.0.0.1:6379,pass=123,defaultDatabase=13,poolsize=50,prefix=key前辍");
+var csredis = new CSRedis.CSRedisClient("127.0.0.1:6379,pass=123,defaultDatabase=13,ssl=false,writeBuffer=10240,poolsize=50,prefix=key前辍");
 services.AddSingleton<IDistributedCache>(new Microsoft.Extensions.Caching.Redis.CSRedisCache(csredis));
 ```
 
@@ -15,10 +15,10 @@ services.AddSingleton<IDistributedCache>(new Microsoft.Extensions.Caching.Redis.
 
 ```csharp
 var csredis = new CSRedis.CSRedisClient(null,
-  "127.0.0.1:6371,pass=123,defaultDatabase=11,poolsize=10,prefix=key前辍", 
-  "127.0.0.1:6372,pass=123,defaultDatabase=12,poolsize=11,prefix=key前辍",
-  "127.0.0.1:6373,pass=123,defaultDatabase=13,poolsize=12,prefix=key前辍",
-  "127.0.0.1:6374,pass=123,defaultDatabase=14,poolsize=13,prefix=key前辍");
+  "127.0.0.1:6371,pass=123,defaultDatabase=11,poolsize=10,ssl=false,writeBuffer=10240,prefix=key前辍", 
+  "127.0.0.1:6372,pass=123,defaultDatabase=12,poolsize=11,ssl=false,writeBuffer=10240,prefix=key前辍",
+  "127.0.0.1:6373,pass=123,defaultDatabase=13,poolsize=12,ssl=false,writeBuffer=10240,prefix=key前辍",
+  "127.0.0.1:6374,pass=123,defaultDatabase=14,poolsize=13,ssl=false,writeBuffer=10240,prefix=key前辍");
 services.AddSingleton<IDistributedCache>(new Microsoft.Extensions.Caching.Redis.CSRedisCache(csredis));
 ```
 

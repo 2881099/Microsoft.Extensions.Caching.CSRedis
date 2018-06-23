@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Distributed;
@@ -64,12 +65,12 @@ namespace Microsoft.Extensions.Caching.Redis {
 			var absoluteExpiration = GetAbsoluteExpiration(creationTime, options);
 
 			var result = _redisClient.Eval(SetScript, key,
-				new[]
+				new object[]
 				{
-						string.Concat(absoluteExpiration?.Ticks ?? NotPresent),
-						string.Concat(options.SlidingExpiration?.Ticks ?? NotPresent),
-						string.Concat(GetExpirationInSeconds(creationTime, absoluteExpiration, options) ?? NotPresent),
-						Convert.ToBase64String(value)
+						absoluteExpiration?.Ticks ?? NotPresent,
+						options.SlidingExpiration?.Ticks ?? NotPresent,
+						GetExpirationInSeconds(creationTime, absoluteExpiration, options) ?? NotPresent,
+						value
 				});
 		}
 
@@ -92,12 +93,12 @@ namespace Microsoft.Extensions.Caching.Redis {
 
 			var absoluteExpiration = GetAbsoluteExpiration(creationTime, options);
 			await _redisClient.EvalAsync(SetScript, key,
-				new[]
+				new object[]
 				{
-						string.Concat(absoluteExpiration?.Ticks ?? NotPresent),
-						string.Concat(options.SlidingExpiration?.Ticks ?? NotPresent),
-						string.Concat(GetExpirationInSeconds(creationTime, absoluteExpiration, options) ?? NotPresent),
-						Convert.ToBase64String(value)
+						absoluteExpiration?.Ticks ?? NotPresent,
+						options.SlidingExpiration?.Ticks ?? NotPresent,
+						GetExpirationInSeconds(creationTime, absoluteExpiration, options) ?? NotPresent,
+						value
 				});
 		}
 
@@ -128,9 +129,9 @@ namespace Microsoft.Extensions.Caching.Redis {
 			// TODO: Can this be done in one operation on the server side? Probably, the trick would just be the DateTimeOffset math.
 			string[] results;
 			if (getData) {
-				results = _redisClient.HashMGet(key, new[] { AbsoluteExpirationKey, SlidingExpirationKey, DataKey });
+				results = _redisClient.HashMGet(key, AbsoluteExpirationKey, SlidingExpirationKey, DataKey);
 			} else {
-				results = _redisClient.HashMGet(key, new[] { AbsoluteExpirationKey, SlidingExpirationKey });
+				results = _redisClient.HashMGet(key, AbsoluteExpirationKey, SlidingExpirationKey);
 			}
 
 			// TODO: Error handling
@@ -140,7 +141,7 @@ namespace Microsoft.Extensions.Caching.Redis {
 			}
 
 			if (results.Length >= 3 && !string.IsNullOrEmpty(results[2])) {
-				return Convert.FromBase64String(results[2]);
+				return Encoding.UTF8.GetBytes(results[2]);
 			}
 
 			return null;
@@ -157,9 +158,9 @@ namespace Microsoft.Extensions.Caching.Redis {
 			// TODO: Can this be done in one operation on the server side? Probably, the trick would just be the DateTimeOffset math.
 			string[] results;
 			if (getData) {
-				results = await _redisClient.HashMGetAsync(key, new[] { AbsoluteExpirationKey, SlidingExpirationKey, DataKey });
+				results = await _redisClient.HashMGetAsync(key, AbsoluteExpirationKey, SlidingExpirationKey, DataKey);
 			} else {
-				results = await _redisClient.HashMGetAsync(key, new[] { AbsoluteExpirationKey, SlidingExpirationKey });
+				results = await _redisClient.HashMGetAsync(key, AbsoluteExpirationKey, SlidingExpirationKey);
 			}
 
 			// TODO: Error handling
@@ -169,7 +170,7 @@ namespace Microsoft.Extensions.Caching.Redis {
 			}
 
 			if (results.Length >= 3 && !string.IsNullOrEmpty(results[2])) {
-				return Convert.FromBase64String(results[2]);
+				return Encoding.UTF8.GetBytes(results[2]);
 			}
 
 			return null;
@@ -193,13 +194,13 @@ namespace Microsoft.Extensions.Caching.Redis {
 			// TODO: Error handling
 		}
 
-		private void MapMetadata(string[] results, out DateTimeOffset? absoluteExpiration, out TimeSpan? slidingExpiration) {
+		private void MapMetadata(object[] results, out DateTimeOffset? absoluteExpiration, out TimeSpan? slidingExpiration) {
 			absoluteExpiration = null;
 			slidingExpiration = null;
-			if (long.TryParse(results[0], out var absoluteExpirationTicks) && absoluteExpirationTicks != NotPresent) {
+			if (long.TryParse(results[0]?.ToString(), out var absoluteExpirationTicks) && absoluteExpirationTicks != NotPresent) {
 				absoluteExpiration = new DateTimeOffset(absoluteExpirationTicks, TimeSpan.Zero);
 			}
-			if (long.TryParse(results[1], out var slidingExpirationTicks) && slidingExpirationTicks != NotPresent) {
+			if (long.TryParse(results[1]?.ToString(), out var slidingExpirationTicks) && slidingExpirationTicks != NotPresent) {
 				slidingExpiration = new TimeSpan(slidingExpirationTicks);
 			}
 		}
