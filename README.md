@@ -2,7 +2,7 @@
 
 # 使用方法
 
-> Install-Package Caching.CSRedis -Version 2.3.6
+> Install-Package Caching.CSRedis
 
 ## 普通模式
 
