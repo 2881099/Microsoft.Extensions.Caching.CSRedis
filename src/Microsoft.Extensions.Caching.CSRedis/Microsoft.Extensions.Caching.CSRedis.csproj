@@ -15,6 +15,9 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DocumentationFile>bin\Debug\netstandard2.0\Caching.CSRedis.xml</DocumentationFile>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DocumentationFile>bin\Release\netstandard2.0\Microsoft.Extensions.Caching.CSRedis.xml</DocumentationFile>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CSRedisCore" Version="2.3.9" />
     <PackageReference Include="Microsoft.Extensions.Caching.Redis" Version="2.1.0" />
