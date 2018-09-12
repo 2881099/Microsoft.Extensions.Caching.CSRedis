@@ -4,15 +4,15 @@
     <AssemblyName>Caching.CSRedis</AssemblyName>
     <PackageId>Caching.CSRedis</PackageId>
     <RootNamespace>Caching.CSRedis</RootNamespace>
-    <Version>2.6.0</Version>
+    <Version>2.6.1</Version>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageProjectUrl>https://github.com/2881099/Microsoft.Extensions.Caching.CSRedis</PackageProjectUrl>
     <Description>分布式缓存 CSRedisCore 现实 Microsoft.Extensions.Caching</Description>
     <RepositoryUrl>https://github.com/2881099/Microsoft.Extensions.Caching.CSRedis</RepositoryUrl>
     <PackageTags>caching csredis redis c# 分布式缓存 集群 负载 cluster Microsoft.Extensions.Caching</PackageTags>
     <WarningLevel>3</WarningLevel>
-    <AssemblyVersion>2.6.0.0</AssemblyVersion>
-    <FileVersion>2.6.0.0</FileVersion>
+    <AssemblyVersion>2.6.1.0</AssemblyVersion>
+    <FileVersion>2.6.1.0</FileVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DocumentationFile>bin\Debug\netstandard2.0\Caching.CSRedis.xml</DocumentationFile>
