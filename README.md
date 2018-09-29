@@ -22,6 +22,18 @@ var csredis = new CSRedis.CSRedisClient(null,
 services.AddSingleton<IDistributedCache>(new Microsoft.Extensions.Caching.Redis.CSRedisCache(csredis));
 ```
 
+# 缓存对象扩展方法
+
+```csharp
+IDistributedCache cache = xxxx;
+
+object obj1 = new xxxx();
+cache.SetObject("key1", obj1);
+
+object obj2 = cache.GetObject("key1");
+T obj3 = cache.GetObject<T>("key1");
+```
+
 # 批量删除
 
 ```csharp

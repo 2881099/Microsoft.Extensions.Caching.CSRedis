@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Distributed;
 
 namespace Microsoft.Extensions.Caching.Redis {
+
 	public class CSRedisCache : IDistributedCache {
 		private CSRedis.CSRedisClient _redisClient;
 		public CSRedisCache(CSRedis.CSRedisClient redisClient) {
@@ -127,9 +128,11 @@ namespace Microsoft.Extensions.Caching.Redis {
 
 			// This also resets the LRU status as desired.
 			// TODO: Can this be done in one operation on the server side? Probably, the trick would just be the DateTimeOffset math.
-			string[] results;
+			object[] results;
+			byte[] value = null;
 			if (getData) {
-				results = _redisClient.HashMGet(key, AbsoluteExpirationKey, SlidingExpirationKey, DataKey);
+				var ret = _redisClient.HashMGetBytes(key, AbsoluteExpirationKey, SlidingExpirationKey, DataKey);
+				results = new object[] { ret[0] == null ? null : Encoding.UTF8.GetString(ret[0]), ret[1] == null ? null : Encoding.UTF8.GetString(ret[1]), value = ret[2] };
 			} else {
 				results = _redisClient.HashMGet(key, AbsoluteExpirationKey, SlidingExpirationKey);
 			}
@@ -140,8 +143,8 @@ namespace Microsoft.Extensions.Caching.Redis {
 				Refresh(key, absExpr, sldExpr);
 			}
 
-			if (results.Length >= 3 && !string.IsNullOrEmpty(results[2])) {
-				return Encoding.UTF8.GetBytes(results[2]);
+			if (results.Length >= 3) {
+				return value;
 			}
 
 			return null;
@@ -156,9 +159,11 @@ namespace Microsoft.Extensions.Caching.Redis {
 
 			// This also resets the LRU status as desired.
 			// TODO: Can this be done in one operation on the server side? Probably, the trick would just be the DateTimeOffset math.
-			string[] results;
+			object[] results;
+			byte[] value = null;
 			if (getData) {
-				results = await _redisClient.HashMGetAsync(key, AbsoluteExpirationKey, SlidingExpirationKey, DataKey);
+				var ret = await _redisClient.HashMGetBytesAsync(key, AbsoluteExpirationKey, SlidingExpirationKey, DataKey);
+				results = new object[] { ret[0] == null ? null : Encoding.UTF8.GetString(ret[0]), ret[1] == null ? null : Encoding.UTF8.GetString(ret[1]), value = ret[2] };
 			} else {
 				results = await _redisClient.HashMGetAsync(key, AbsoluteExpirationKey, SlidingExpirationKey);
 			}
@@ -169,8 +174,8 @@ namespace Microsoft.Extensions.Caching.Redis {
 				await RefreshAsync(key, absExpr, sldExpr, token);
 			}
 
-			if (results.Length >= 3 && !string.IsNullOrEmpty(results[2])) {
-				return Encoding.UTF8.GetBytes(results[2]);
+			if (results.Length >= 3) {
+				return value;
 			}
 
 			return null;
