@@ -58,7 +58,9 @@ namespace Microsoft.Extensions.Caching.Distributed {
 		/// <param name="key">key</param>
 		/// <param name="value">对象</param>
 		public static void SetObject(this IDistributedCache cache, string key, object value) {
-			cache.Set(key, Serialize(value));
+			var data = Serialize(value);
+			if (data == null) cache.Remove(key);
+			else cache.Set(key, Serialize(value));
 		}
 		/// <summary>
 		/// 序列化对象后，设置缓存
@@ -68,7 +70,9 @@ namespace Microsoft.Extensions.Caching.Distributed {
 		/// <param name="value">对象</param>
 		/// <param name="options">策略</param>
 		public static void SetObject(this IDistributedCache cache, string key, object value, DistributedCacheEntryOptions options) {
-			cache.Set(key, Serialize(value), options);
+			var data = Serialize(value);
+			if (data == null) cache.Remove(key);
+			else cache.Set(key, Serialize(value), options);
 		}
 		/// <summary>
 		/// 序列化对象后，设置缓存
@@ -77,7 +81,9 @@ namespace Microsoft.Extensions.Caching.Distributed {
 		/// <param name="key">key</param>
 		/// <param name="value">对象</param>
 		public static Task SetObjectAsync(this IDistributedCache cache, string key, object value) {
-			return cache.SetAsync(key, Serialize(value));
+			var data = Serialize(value);
+			if (data == null) return cache.RemoveAsync(key);
+			else return cache.SetAsync(key, Serialize(value));
 		}
 		/// <summary>
 		/// 序列化对象后，设置缓存
@@ -87,10 +93,13 @@ namespace Microsoft.Extensions.Caching.Distributed {
 		/// <param name="value">对象</param>
 		/// <param name="options">策略</param>
 		public static Task SetObjectAsync(this IDistributedCache cache, string key, object value, DistributedCacheEntryOptions options) {
-			return cache.SetAsync(key, Serialize(value), options);
+			var data = Serialize(value);
+			if (data == null) return cache.RemoveAsync(key);
+			else return cache.SetAsync(key, Serialize(value), options);
 		}
 
 		public static byte[] Serialize(object value) {
+			if (value == null) return null;
 			using (MemoryStream ms = new MemoryStream()) {
 				IFormatter formatter = new BinaryFormatter();
 				formatter.Serialize(ms, value);
@@ -98,6 +107,7 @@ namespace Microsoft.Extensions.Caching.Distributed {
 			}
 		}
 		public static object Deserialize(byte[] stream) {
+			if (stream == null) return null;
 			using (MemoryStream ms = new MemoryStream(stream)) {
 				IFormatter formatter = new BinaryFormatter();
 				return formatter.Deserialize(ms);
