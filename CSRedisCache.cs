@@ -131,10 +131,10 @@ namespace Microsoft.Extensions.Caching.Redis {
 			object[] results;
 			byte[] value = null;
 			if (getData) {
-				var ret = _redisClient.HashMGetBytes(key, AbsoluteExpirationKey, SlidingExpirationKey, DataKey);
+				var ret = _redisClient.HMGet<byte[]>(key, AbsoluteExpirationKey, SlidingExpirationKey, DataKey);
 				results = new object[] { ret[0] == null ? null : Encoding.UTF8.GetString(ret[0]), ret[1] == null ? null : Encoding.UTF8.GetString(ret[1]), value = ret[2] };
 			} else {
-				results = _redisClient.HashMGet(key, AbsoluteExpirationKey, SlidingExpirationKey);
+				results = _redisClient.HMGet(key, AbsoluteExpirationKey, SlidingExpirationKey);
 			}
 
 			// TODO: Error handling
@@ -162,10 +162,10 @@ namespace Microsoft.Extensions.Caching.Redis {
 			object[] results;
 			byte[] value = null;
 			if (getData) {
-				var ret = await _redisClient.HashMGetBytesAsync(key, AbsoluteExpirationKey, SlidingExpirationKey, DataKey);
+				var ret = await _redisClient.HMGetAsync<byte[]>(key, AbsoluteExpirationKey, SlidingExpirationKey, DataKey);
 				results = new object[] { ret[0] == null ? null : Encoding.UTF8.GetString(ret[0]), ret[1] == null ? null : Encoding.UTF8.GetString(ret[1]), value = ret[2] };
 			} else {
-				results = await _redisClient.HashMGetAsync(key, AbsoluteExpirationKey, SlidingExpirationKey);
+				results = await _redisClient.HMGetAsync(key, AbsoluteExpirationKey, SlidingExpirationKey);
 			}
 
 			// TODO: Error handling
@@ -186,7 +186,7 @@ namespace Microsoft.Extensions.Caching.Redis {
 				throw new ArgumentNullException(nameof(key));
 			}
 
-			_redisClient.Remove(key.Split('|'));
+			_redisClient.Del(key.Split('|'));
 			// TODO: Error handling
 		}
 
@@ -195,7 +195,7 @@ namespace Microsoft.Extensions.Caching.Redis {
 				throw new ArgumentNullException(nameof(key));
 			}
 
-			await _redisClient.RemoveAsync(key.Split('|'));
+			await _redisClient.DelAsync(key.Split('|'));
 			// TODO: Error handling
 		}
 
