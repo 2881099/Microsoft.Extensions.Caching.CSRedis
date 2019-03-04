@@ -1,5 +1,10 @@
 由于 StackExchange.Redis 不可靠，导致 Microsoft.Extensions.Caching.Redis 不能放心使用。故使用 CSRedisCore 作为分布式缓存。
 
+| Package Name |  NuGet | Downloads | |
+|--------------|  ------- |  ---- | -- |
+| CSRedisCore | [![nuget](https://img.shields.io/nuget/v/CSRedisCore.svg?style=flat-square)](https://www.nuget.org/packages/CSRedisCore) | [![stats](https://img.shields.io/nuget/dt/CSRedisCore.svg?style=flat-square)](https://www.nuget.org/stats/packages/CSRedisCore?groupby=Version) |
+| Caching.CSRedis | [![nuget](https://img.shields.io/nuget/v/Caching.CSRedis.svg?style=flat-square)](https://www.nuget.org/packages/Caching.CSRedis) | [![stats](https://img.shields.io/nuget/dt/Caching.CSRedis.svg?style=flat-square)](https://www.nuget.org/stats/packages/Caching.CSRedis?groupby=Version) | IDistributedCache |
+
 # 使用方法
 
 > Install-Package Caching.CSRedis
