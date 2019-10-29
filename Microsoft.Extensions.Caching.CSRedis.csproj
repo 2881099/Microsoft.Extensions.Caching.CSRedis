@@ -4,7 +4,7 @@
     <AssemblyName>Caching.CSRedis</AssemblyName>
     <PackageId>Caching.CSRedis</PackageId>
     <RootNamespace>Caching.CSRedis</RootNamespace>
-    <Version>3.1.6</Version>
+    <Version>3.1.11</Version>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageProjectUrl>https://github.com/2881099/Microsoft.Extensions.Caching.CSRedis</PackageProjectUrl>
     <Description>分布式缓存 CSRedisCore 实现 Microsoft.Extensions.Caching</Description>
