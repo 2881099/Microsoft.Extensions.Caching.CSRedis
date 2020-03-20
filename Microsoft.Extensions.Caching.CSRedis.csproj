@@ -1,10 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFrameworks>netstandard2.0;netcoreapp31;netcoreapp30;netcoreapp22;netcoreapp21</TargetFrameworks>
     <AssemblyName>Caching.CSRedis</AssemblyName>
     <PackageId>Caching.CSRedis</PackageId>
     <RootNamespace>Caching.CSRedis</RootNamespace>
-    <Version>3.4.5</Version>
+    <Version>3.5.0</Version>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageProjectUrl>https://github.com/2881099/Microsoft.Extensions.Caching.CSRedis</PackageProjectUrl>
     <Description>分布式缓存 CSRedisCore 实现 Microsoft.Extensions.Caching</Description>
@@ -15,12 +15,24 @@
     <AssemblyOriginatorKeyFile>key.snk</AssemblyOriginatorKeyFile>
     <DelaySign>false</DelaySign>
   </PropertyGroup>
+  
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DocumentationFile>bin\Debug\netstandard2.0\Caching.CSRedis.xml</DocumentationFile>
   </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="3.1.1" />
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netcoreapp31' or '$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="3.1.2" />
   </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'netcoreapp30'">
+    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="3.0.3" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'netcoreapp22'">
+    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="2.2.0" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'netcoreapp21'">
+    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="2.1.2" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\csredis\src\CSRedisCore.csproj" />
   </ItemGroup>
