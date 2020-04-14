@@ -1,3 +1,5 @@
+# 源码已移至 https://github.com/2881099/csredis
+
 由于 StackExchange.Redis 不可靠，导致 Microsoft.Extensions.Caching.Redis 不能放心使用。故使用 CSRedisCore 作为分布式缓存。
 
 | Package Name |  NuGet | Downloads | |
